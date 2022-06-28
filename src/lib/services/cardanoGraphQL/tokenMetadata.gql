@@ -1,0 +1,10 @@
+query tokenMints($limit: Int, $offset: Int, $where: TokenMint_bool_exp) {
+   tokenMints(limit: $limit, offset: $offset, where: $where) {
+      transaction {
+         metadata {
+            key
+            value
+         }
+      }
+   }
+}

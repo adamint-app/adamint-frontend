@@ -1,0 +1,1 @@
+export const compareNumber = <T>(f: (x: T) => number) => (a: T, b: T) => f(a) - f(b)
