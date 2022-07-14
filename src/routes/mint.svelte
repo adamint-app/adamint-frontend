@@ -71,7 +71,7 @@
 </script>
 
 <svelte:head>
-   <title>AdaMint | Mint</title>
+   <title>AstroMint | Mint</title>
 </svelte:head>
 
 <!-- content-center -->

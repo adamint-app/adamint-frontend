@@ -4,12 +4,12 @@
 
 <svelte:head>
 
-   <title>AdaMint | About</title>
+   <title>AstroMint | About</title>
 </svelte:head>
 
-# What is AdaMint?
+# What is AstroMint?
 
--  AdaMint lets you create any number of currencies and NFTs you want - free of charge. You only pay Cardano network fees (< 1 ADA)!
+-  AstroMint lets you create any number of currencies and NFTs you want - free of charge. You only pay Cardano network fees (< 1 ADA)!
 -  All minted currencies use single Policy ID which allows their holders to be confident in their security.
 -  You can easily check if tokens supposedly minted on this website are legitimate by checking their Policy Id.
 
@@ -130,6 +130,7 @@ Or, if the currency owner's wallet was hacked and his Control NFT stolen - it's 
 
 # Contacts
 
+This app is developed and supported by <a target="_blank" href="https://www.astroswap.app">AstroSwap</a> team.
 Have a question, suggestion or want to discuss a collaboration?
 [Contact us via adamint.app@gmail.com](mailto:adamint.app@gmail.com)
 

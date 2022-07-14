@@ -15,12 +15,12 @@
 </script>
 
 <svelte:head>
-   <title>AdaMint | Welcome</title>
+   <title>AstroMint | Welcome</title>
 </svelte:head>
 
 <section class="flex flex-col items-center w-screen p-4 xs:p-6 gap-3 xs:gap-7 ">
    <span class="text-2xl xs:text-5xl text-center text-slate-400">welcome to</span>
-   <span class="text-4xl xs:text-7xl text-center text-blue-700">AdaMint</span>
+   <span class="text-4xl xs:text-7xl text-center text-indigo-700">AstroMint</span>
    <span class="text-lg xs:text-2xl text-center text-slate-500">
       for <a class="text-blue-700" target="_blank" href="https://cardano.org">Cardano</a>
       by <a class="text-violet-800" target="_blank" href="https://www.astroswap.app">AstroSwap</a>

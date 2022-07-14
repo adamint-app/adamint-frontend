@@ -61,7 +61,7 @@
 </script>
 
 <svelte:head>
-   <title>AdaMint | {cip25?.name ?? 'Control'}</title>
+   <title>AstroMint | {cip25?.name ?? 'Control'}</title>
 </svelte:head>
 
 {#if wallet}

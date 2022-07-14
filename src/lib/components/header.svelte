@@ -19,7 +19,7 @@
             ><img
                class="w-12 -my-3 p-1 rounded-2xl nm-button"
                class:nm-button-active={/\/(?![\w])/.test($page.url.pathname)}
-               src="$assets/adamint-logo-min.svg"
+               src="$assets/astromint-logo-min.svg"
             />
          </a>
          {#each items as [href, name]}

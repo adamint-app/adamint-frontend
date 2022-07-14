@@ -34,7 +34,7 @@
 </script>
 
 <svelte:head>
-   <title>AdaMint | Control</title>
+   <title>AstroMint | Control</title>
 </svelte:head>
 
 {#if wallet}
@@ -82,7 +82,7 @@
       {#if assets.reduce((acc, [cur]) => acc + cur.length, 0) === 0}
          <div class="pt-28">
             <span class="text-slate-500 text-base xs:text-xl"
-               >you do not have any tokens minted with AdaMint in your wallet</span
+               >you do not have any tokens minted with AstroMint in your wallet</span
             >
          </div>
       {/if}
