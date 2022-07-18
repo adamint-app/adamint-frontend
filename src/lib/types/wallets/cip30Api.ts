@@ -46,7 +46,8 @@ export type hash32 = string
 export type WalletCIP30ApiInstance = {
    getNetworkId(): Promise<number>
    getUtxos(amount?: Cbor<Value>, paginate?: Paginate): Promise<Cbor<TransactionUnspentOutput>[] | undefined>
-   getCollateral(params?: {amount: string /*Cbor<Value>*/}): Promise<Cbor<TransactionUnspentOutput>[] | undefined>
+   // getCollateral(params: {amount: Cbor<string | number>}): Promise<Cbor<TransactionUnspentOutput>[] | undefined>
+   getCollateral(params: {amount: string | number}): Promise<Cbor<TransactionUnspentOutput>[] | undefined>
    getBalance() : Promise<Cbor<Value>>
    getUsedAddresses(paginate?: Paginate): Promise<Cbor<Address>[]>
    getUnusedAddresses(): Promise<Cbor<Address>[]>

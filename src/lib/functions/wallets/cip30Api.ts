@@ -6,13 +6,16 @@ import { Buffer } from 'buffer'
 import { makeTxBuilderCfg, sendTransaction, buildUnknownMintTransaction, wasmQtyFromSupply, toBigNum, preEvaluateTx, signTx, type TxUnknowns, type MintTransactionBuilder, type WasmTokenDeltaParam, wasmTokenDeltaParam, wasmTokenParam, type WasmTokenParam, rejectWith, runIgnoreErrors } from '$lib/functions/wasmTransactionUtils'
 import type { CardanoWasm } from "$lib/types/cardano/wasm"
 import type { MkMetadata, TransactionWallet } from '$lib/types/cardano/transactionWallet'
-import { mapUncbor, uncbor, unsafeCborHex, type WalletCIP30Api } from '$lib/types/wallets/cip30Api'
+import { mapUncbor, tocbor, uncbor, unsafeCborHex, type WalletCIP30Api } from '$lib/types/wallets/cip30Api'
 import policyFt from '$lib/../../static/cardano/mint-ft-policy.json'
 import policyNft from '$lib/../../static/cardano/mint-nft-policy.json'
 import { ftPolicyId, nftPolicyId } from '$lib/functions/policyIds'
 import { tuple } from '../tuple'
 import type { CardanoMetadata } from '$lib/types/cardano/metadata'
 import type { CardanoParams } from '../cardanoConstants'
+// import CborEncoder from '@stricahq/cbors/dist/encode.js'
+// import { Decoder as CborDecoder } from '@stricahq/cbors'
+import CBOR from '@jprochazk/cbor'
 
 // export async function enalbeWalletCIP30(wallet: WalletCIP30Api): Promise<WalletCIP30Api> {
 //    const instance = await wallet.enable()
@@ -33,14 +36,35 @@ function fromWasmUTxO(utxo: TransactionUnspentOutput) {
    } as WalletUTxO
 }
 
+// const decodeCborNumber = (b: Uint8Array) => {
+//    const decoded = CborDecoder.decode(Buffer.from(b)).value
+//    switch (typeof decoded) {
+//       case 'string': return decoded
+//       case 'number': return decoded
+//       case 'bigint': return decoded.toString()
+//       default: throw new Error('Failed to decode number from cbor')
+//    }
+// }
+
 export const walletLikeCIP30: WalletLike<WalletCIP30Api> = {
-   enableWallet: async (wallet) => {
-         wallet.instance = await wallet.enable()
-         wallet.apiVersion = mkFunctionString(wallet.apiVersion)
-         if (!wallet.instance.getCollateral) {
-            wallet.instance.getCollateral = (wallet.instance as any).experimental?.getCollateral
+   enableWallet: async (wallet) => {      
+      const instance = await wallet.enable()
+      // Hack to avoid Yoroi's Object.freeze() on the returned instance
+      wallet.instance = Object.setPrototypeOf({...instance}, Object.getPrototypeOf(instance))
+
+      // Hacks to cover for wallets that do not implement CIP30 properly
+      wallet.apiVersion = mkFunctionString(wallet.apiVersion)
+      {
+         wallet.instance.getCollateral = (params) => {
+            const f = (args: any) => instance.getCollateral?.(args)
+               ?? (instance as any).experimental?.getCollateral(args)
+               ?? Promise.reject('Wallet does not implement getCollateral function!')
+            return f({ amount: tocbor(params.amount, (v) => new Uint8Array(CBOR.encode(v)))})
+               .catch(() => f(params.amount))
          }
-         return wallet
+      }
+
+      return wallet
    },
    getBalance: (wallet) => wallet.instance.getBalance()
       .then(data => Buffer.from(data as any, 'hex'))

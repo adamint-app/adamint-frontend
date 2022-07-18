@@ -4,7 +4,7 @@ import sveltePreprocess from 'svelte-preprocess'
 import importAssets from 'svelte-preprocess-import-assets'
 import svelteImage from 'svelte-image'
 import {markdown} from 'svelte-preprocess-markdown'
-import wasmPack from 'vite-plugin-wasm-pack'
+//import wasmPack from 'vite-plugin-wasm-pack'
 import { vitePluginCommonjs } from 'vite-plugin-commonjs'
 import vitePluginWasm from 'vite-plugin-wasm'
 import adapterCloudflare from '@sveltejs/adapter-cloudflare';
@@ -32,39 +32,39 @@ const config = {
       methodOverride: {
          allowed: ['PATCH', 'DELETE']
       },
-      vite: {
-         build: {
-            target: "esnext"
-         },
-         resolve: {
-            alias: {
-               '$assets': path.resolve('src/lib/assets'),
-               '$lib': path.resolve('src/lib'),
-               //'@apollo/client/core': '@apollo/client/core/core.cjs'
-               //'svelte-apollo': '/node_modules/svelte-apollo/dist/svelte-apollo.es.js'
-            }
-         },
-         extensions: ['.wasm'],
-         // https://benw.is/using-wasm-in-sveltekit
-         plugins: [//wasmPack([], ['$lib/../../node_modules/cardano-serialization-lib']),
-            vitePluginCommonjs(),
-            vitePluginWasm.default(),
-            // topLevelAwait.default()
-         ],
-         optimizeDeps: {
-            exclude: [],
-            esbuildOptions:{
-              plugins:[
-               //vitePluginCommonjs(['@apollo/client']) 
-              ]
-            },
-            //include: ['@apollo/client']
-         },
-         ssr: {
-            external: [],
-            noExternal: ['@apollo/client', 'svelte-apollo-client'],
-         }
-      }
+      // vite: {
+      //    build: {
+      //       target: "esnext"
+      //    },
+      //    resolve: {
+      //       alias: {
+      //          '$assets': path.resolve('src/lib/assets'),
+      //          '$lib': path.resolve('src/lib'),
+      //          //'@apollo/client/core': '@apollo/client/core/core.cjs'
+      //          //'svelte-apollo': '/node_modules/svelte-apollo/dist/svelte-apollo.es.js'
+      //       }
+      //    },
+      //    extensions: ['.wasm'],
+      //    // https://benw.is/using-wasm-in-sveltekit
+      //    plugins: [//wasmPack([], ['$lib/../../node_modules/cardano-serialization-lib']),
+      //       vitePluginCommonjs(),
+      //       vitePluginWasm(),
+      //       // topLevelAwait.default()
+      //    ],
+      //    optimizeDeps: {
+      //       exclude: [],
+      //       esbuildOptions:{
+      //         plugins:[
+      //          //vitePluginCommonjs(['@apollo/client']) 
+      //         ]
+      //       },
+      //       //include: ['@apollo/client']
+      //    },
+      //    ssr: {
+      //       external: [],
+      //       noExternal: ['@apollo/client', 'svelte-apollo-client'],
+      //    }
+      // }
    },
 	// experimental: {
 	// 	prebundleSvelteLibraries: true

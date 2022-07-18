@@ -1,5 +1,5 @@
 import type { CardanoWasm } from "$lib/types/cardano/wasm"
-import type { hash_script_data, BigNum, Value, TransactionBuilder, TransactionOutput, ScriptHash, Address, Costmdls, TransactionOutputs, AssetName, AuxiliaryData, Transaction } from '$lib/../../node_modules/cardano-serialization-lib'
+import type { hash_script_data, BigNum, Value, TransactionBuilder, TransactionOutput, ScriptHash, Address, Costmdls, TransactionOutputs, AssetName, AuxiliaryData, Transaction, PlutusData } from '$lib/../../node_modules/cardano-serialization-lib'
 import type { TransactionUnspentOutput, TransactionBuilderConfig, PlutusScript } from '$lib/../../node_modules/cardano-serialization-lib'
 import { MetadataJsonSchema, CoinSelectionStrategyCIP2 } from '$lib/../../node_modules/cardano-serialization-lib'
 import policyFt from '../../../static/cardano/mint-ft-policy.json'
@@ -129,15 +129,7 @@ export const toBigNum = (n: number) => cardanoWasm.BigNum.from_str(n.toString())
 const showValue = (v: Value) => showCardanoValue(assetsCardanoValue(valueWasmAssets(v)))
 
 // https://github.com/Emurgo/cardano-serialization-lib/issues/303
-function mintRedeemer(index: number, value: number, units?: ExUnits) {
-   // Create the redeemer data
-   const redeemerData = cardanoWasm.PlutusData.new_constr_plutus_data(
-      cardanoWasm.ConstrPlutusData.new(
-         cardanoWasm.BigNum.from_str(value.toString()), // cardanoWasm.Int.new_i32(value),
-         cardanoWasm.PlutusList.new()
-      )
-   )
-
+function mintRedeemer(index: number, redeemerData: PlutusData, units?: ExUnits) {
    // redeemer itself
    const redeemer = cardanoWasm.Redeemer.new(
       cardanoWasm.RedeemerTag.new_mint(),
@@ -319,7 +311,7 @@ export async function buildUnknownMintTransaction(
 
    // =====
    const collateral = mapUncbor(cardanoWasm.TransactionUnspentOutput.from_bytes)
-      (await wallet.instance.getCollateral())
+      (await wallet.instance.getCollateral({amount: 1500000}))
    if (collateral.length <= 0) {
       return Promise.reject("No available collateral!")
    }
@@ -346,7 +338,7 @@ export async function buildUnknownMintTransaction(
 
          const witnessSet = cardanoWasm.TransactionWitnessSet.new()
 
-         const setRedeemers = (txBuilder: TransactionBuilder, redeemerExs: [number, ExUnits][]) => {
+         const setRedeemers = (txBuilder: TransactionBuilder, redeemerExs: [PlutusData, ExUnits][]) => {
             const redeemers = cardanoWasm.Redeemers.new()
             redeemerExs.forEach((r, i) => redeemers.add(mintRedeemer(i, r[0], r[1])))
             txBuilder.set_redeemers(redeemers)
@@ -359,7 +351,13 @@ export async function buildUnknownMintTransaction(
          const redeemerExs = unknowns?.mintRedeemerExs
             ?? toMint.map(() => ({ memory: 0, steps: 0}))
 
-         setRedeemers(txBuilder, redeemerExs.map(ex => tuple(0, ex)))
+         // const mintPlutusData = cardanoWasm.PlutusData.new_constr_plutus_data(cardanoWasm.ConstrPlutusData.new(
+         //    cardanoWasm.BigNum.from_str('0'),
+         //    cardanoWasm.PlutusList.new()
+         // ))
+         const mintPlutusData = cardanoWasm.PlutusData.new_integer(cardanoWasm.BigInt.from_str('0'))
+
+         setRedeemers(txBuilder, redeemerExs.map(ex => tuple(mintPlutusData, ex)))
 
          const txBody = txBuilder.build()
          txBody.set_mint(mint)
