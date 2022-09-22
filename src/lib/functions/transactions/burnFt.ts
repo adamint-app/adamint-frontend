@@ -1,7 +1,6 @@
 import type { TokenDeltaParam, TokenParam } from "$lib/types/cardano/transactionModel"
 import type { TransactionWallet } from "$lib/types/cardano/transactionWallet"
 import { assetIconAllowed, assetIconBlobAllowed } from "$lib/functions/assetIcon"
-import type { CardanoParams } from "$lib/functions/cardanoConstants"
 import type { AnyWalletLike } from "$lib/functions/walletUtils"
 import { CID } from 'multiformats/cid'
 import { cip25label, cip38label, initCIP25, initCIP38, mergeMetadata } from "$lib/functions/metadataUtils"
@@ -22,10 +21,9 @@ export async function burnFt(
    wallet: AnyWalletLike,
    walletClass: WalletLike<AnyWalletLike>,
    transactionClass: TransactionWallet<AnyWalletLike>,
-   cardanoParams: CardanoParams,
    toMint: TokenDeltaParam[],
    continuing: TokenParam[]) {
-   const tx = await transactionClass.burnFtTransaction(wallet, cardanoParams, toMint, continuing, Promise.resolve(() => undefined))
+   const tx = await transactionClass.burnFtTransaction(wallet, toMint, continuing, Promise.resolve(() => undefined))
    return walletClass.sendTx(wallet, tx).catch(e => {
       console.log(e)
       return rejectWith(e)

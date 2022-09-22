@@ -3,6 +3,7 @@ import { sveltekit } from '@sveltejs/kit/vite';
 import path from 'path'
 import { vitePluginCommonjs } from 'vite-plugin-commonjs'
 import vitePluginWasm from 'vite-plugin-wasm'
+// import topLevelAwait from "vite-plugin-top-level-await";
 
 /** @type {import('vite').UserConfig} */
 const config = {
@@ -23,7 +24,7 @@ const config = {
             sveltekit(),
             vitePluginCommonjs(),
             vitePluginWasm(),
-            // topLevelAwait.default()
+            // topLevelAwait()
          ],
          optimizeDeps: {
             exclude: [],

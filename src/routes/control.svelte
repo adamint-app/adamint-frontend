@@ -5,7 +5,6 @@
    import { tuple, tuples } from '$lib/functions/tuple'
    import type { AnyWalletLike } from '$lib/functions/walletUtils'
    import type { CardanoValue, WalletLike } from '$lib/types/walletLike'
-   import { AssetName } from '$lib/../../node_modules/cardano-serialization-lib'
    import AssetPreview from '$lib/components/cardano/assetPreview.svelte'
    import { zip } from '$lib/functions/tuple'
 

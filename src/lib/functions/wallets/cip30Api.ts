@@ -1,6 +1,6 @@
 import { mkFunctionString } from '$lib/functions/string'
 import { assetsCardanoValue, fromWasmUTxOId, valueWasmAssets } from '$lib/functions/wasmUtils'
-import type { Address, AssetName, Assets, AuxiliaryData, AuxiliaryDataHash, BaseAddress, BigNum, Bip32PrivateKey, Bip32PublicKey, Ed25519KeyHash, Ed25519Signature, EnterpriseAddress, GeneralTransactionMetadata, hash_auxiliary_data, hash_transaction, Int, LinearFee, make_vkey_witness, MetadataList, MetadataMap, Mint, MintAssets, min_ada_required, min_fee, MultiAsset, NativeScript, NativeScripts, NetworkInfo, PrivateKey, PublicKey, ScriptAll, ScriptAny, ScriptHash, ScriptHashNamespace, ScriptNOfK, ScriptPubkey, StakeCredential, TimelockExpiry, TimelockStart, Transaction, TransactionBody, TransactionBuilder, TransactionHash, TransactionInput, TransactionInputs, TransactionMetadatum, TransactionOutput, TransactionOutputs, TransactionWitnessSet, Value, Vkeywitnesses, TransactionUnspentOutput, TransactionUnspentOutputs } from '$lib/../../node_modules/cardano-serialization-lib'
+import type { TransactionUnspentOutput } from '$lib/../../node_modules/cardano-serialization-lib'
 import type { WalletLike, WalletUTxO } from '$lib/types/walletLike'
 import { Buffer } from 'buffer'
 import { makeTxBuilderCfg, sendTransaction, buildUnknownMintTransaction, wasmQtyFromSupply, toBigNum, preEvaluateTx, signTx, type TxUnknowns, type MintTransactionBuilder, type WasmTokenDeltaParam, wasmTokenDeltaParam, wasmTokenParam, type WasmTokenParam, rejectWith, runIgnoreErrors } from '$lib/functions/wasmTransactionUtils'
@@ -12,10 +12,10 @@ import policyNft from '$lib/../../static/cardano/mint-nft-policy.json'
 import { ftPolicyId, nftPolicyId } from '$lib/functions/policyIds'
 import { tuple } from '../tuple'
 import type { CardanoMetadata } from '$lib/types/cardano/metadata'
-import type { CardanoParams } from '../cardanoConstants'
 // import CborEncoder from '@stricahq/cbors/dist/encode.js'
 // import { Decoder as CborDecoder } from '@stricahq/cbors'
 import CBOR from '@jprochazk/cbor'
+import type { ProtocolParams } from '$lib/types/cardano/network'
 
 // export async function enalbeWalletCIP30(wallet: WalletCIP30Api): Promise<WalletCIP30Api> {
 //    const instance = await wallet.enable()
@@ -81,7 +81,11 @@ export const walletLikeCIP30: WalletLike<WalletCIP30Api> = {
    getIcon: (wallet) => wallet.icon,
    getName: (wallet) => wallet.name,
    getApiVersion: (wallet) => wallet.apiVersion(),
-   sendTx: sendTransaction
+   sendTx: sendTransaction,
+   getNetwork: (wallet) => wallet.instance.getNetworkId().then(id =>(console.log('getNetworkId:', id),
+      [
+         'testnet', 'mainnet'
+      ][id]))
 }
 
 const mkRunner = (mkMetadata: Promise<MkMetadata>,
@@ -90,19 +94,19 @@ const mkRunner = (mkMetadata: Promise<MkMetadata>,
    return txBuilder((await mkMetadata)(assetName))
 }
 
-const evaluateFeeAndSign = async (cardanoParams: CardanoParams, wallet: WalletCIP30Api, toMint: WasmTokenDeltaParam[], continuing: WasmTokenParam[], mkMetadata: Promise<MkMetadata>) => {
+const evaluateFeeAndSign = async (cardanoParams: ProtocolParams, wallet: WalletCIP30Api, toMint: WasmTokenDeltaParam[], continuing: WasmTokenParam[], mkMetadata: Promise<MkMetadata>) => {
    const config = makeTxBuilderCfg(cardanoParams)
    const runTx = (unknowns?: TxUnknowns) =>
-      buildUnknownMintTransaction(wallet, config, cardanoParams, toMint, [], unknowns)
+      buildUnknownMintTransaction(cardanoParams, wallet, config, toMint, [], unknowns)
    const runner = mkRunner(mkMetadata, runIgnoreErrors(runTx))
    const dummy = await signTx(wallet, await runner())
-   const cost = await preEvaluateTx(dummy)
+   const cost = await preEvaluateTx(cardanoParams, dummy)
    const tx = await signTx(wallet, await runner(cost))
    return tx.to_bytes()
 }
 
-export const transactionWalletCIP30: TransactionWallet<WalletCIP30Api> = {
-   mintFtTransaction: async (wallet, ftParams, cardanoParams, mkMetadata) => {
+export const transactionWalletCIP30 = (cardanoParams: ProtocolParams) => <TransactionWallet<WalletCIP30Api>>{
+   mintFtTransaction: async (wallet, ftParams, mkMetadata) => {
       const [scriptFt, scriptNft] = mapUncbor(cardanoWasm.PlutusScript.from_bytes)([policyFt.cborHex, policyNft.cborHex].map(unsafeCborHex))
       const [scriptHashFt, scriptHashNft] = mapUncbor(cardanoWasm.ScriptHash.from_bytes)([ftPolicyId, nftPolicyId].map(unsafeCborHex))
       const toMint = [
@@ -114,7 +118,7 @@ export const transactionWalletCIP30: TransactionWallet<WalletCIP30Api> = {
 
       return evaluateFeeAndSign(cardanoParams, wallet, toMint, [], mkMetadata)
    },
-   mintNftTransaction: async (wallet, cardanoParams, mkMetadata) => {
+   mintNftTransaction: async (wallet, mkMetadata) => {
       const scriptNft = uncbor(cardanoWasm.PlutusScript.from_bytes)(unsafeCborHex(policyNft.cborHex))
       const scriptHashNft = uncbor(cardanoWasm.ScriptHash.from_bytes)(unsafeCborHex(nftPolicyId))
       const toMint = [
@@ -123,7 +127,7 @@ export const transactionWalletCIP30: TransactionWallet<WalletCIP30Api> = {
 
       return evaluateFeeAndSign(cardanoParams, wallet, toMint, [], mkMetadata)
    },
-   burnFtTransaction: (wallet, cardanoParams, toBurn, continuing, mkMetadata) => {
+   burnFtTransaction: (wallet, toBurn, continuing, mkMetadata) => {
       return evaluateFeeAndSign(cardanoParams, wallet, toBurn.map(wasmTokenDeltaParam), continuing.map(wasmTokenParam), mkMetadata)
    }
 }

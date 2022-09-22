@@ -17,6 +17,7 @@
    import WalletInfo from '$lib/components/cardano/walletInfo.svelte'
    import { useWalletConnector } from '$lib/compositions/walletConnector'
    import url from '$lib/compositions/url'
+   import { graphqlClient } from '$lib/services/cardanoGraphQL'
    import {
       type AnyWalletLike,
       type AnyWallet,
@@ -32,6 +33,12 @@
    import type { CardanoWasm } from '$lib/types/cardano/wasm'
    import Loader from '$lib/compositions/Loader'
    import { goto } from '$app/navigation'
+   import {
+      graphqlProtocolParams,
+      resultProtocolParams
+   } from '$lib/functions/cardano/graphql/protocolParams'
+   import type { Unsubscriber } from 'svelte/store'
+   import type { ProtocolParams } from '$lib/types/cardano/network'
 
    const { getWallet, getWalletClass, setConnector, resetConnector } = useWalletConnector()
    let connectorPromise = getWallet() ? Promise.resolve(getWallet()) : Promise.reject()
@@ -61,11 +68,27 @@
       const wasmPromise = window.cardanoWasm
          ? Promise.resolve(window.cardanoWasm)
          : (async () => await import('$lib/../../node_modules/cardano-serialization-lib'))()
+
       Promise.all([wasmPromise, walletClass.enableWallet(walletLike)])
          .then(async ([wasmInstance, wlt]) => {
+            const network = await walletClass.getNetwork(wlt)
+            const subPP = graphqlProtocolParams(graphqlClient)(network)
+            let unsub: Unsubscriber
+            const pp = await new Promise<ProtocolParams>((resolve, reject) => {
+               console.log('graphqlProtocolParams', network)
+               unsub = subPP.subscribe((pp) => {
+                  console.log('graphqlProtocolParams result', pp.data)
+                  if (!pp.data) return
+                  if (pp.error) return reject(pp.error)
+                  const result = resultProtocolParams(network)(pp.data)
+                  console.log('graphqlProtocolParams final', result)
+                  resolve(result)
+               })
+            })
+            unsub()
             failed = false
             window.cardanoWasm = wasmInstance
-            setConnector([wlt, walletClass, transactionWalletClass])
+            setConnector([wlt, walletClass, transactionWalletClass(pp)])
             setConnectorPromise(Promise.resolve(wlt))
          })
          .catch(() => {

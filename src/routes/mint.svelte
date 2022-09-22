@@ -1,7 +1,6 @@
 <script lang="ts">
    import ImageSelectPreview from '$lib/components/imageSelectPreview.svelte'
    import { useWalletConnector } from '$lib/compositions/walletConnector'
-   import { cardanoParams } from '$lib/functions/cardanoConstants'
    import type { UiFtParams } from '$lib/functions/transactions/mintFt'
    import { mintNft, type UiNftParams } from '$lib/functions/transactions/mintNft'
    import { mintFt } from '$lib/functions/transactions/mintFt'
@@ -217,8 +216,8 @@
          on:click={() =>
             (txPromise =
                token.type === 'ft'
-                  ? mintFt(wallet, getWalletClass(), getTransactionClass(), token, cardanoParams)
-                  : mintNft(wallet, getWalletClass(), getTransactionClass(), token, cardanoParams))}
+                  ? mintFt(wallet, getWalletClass(), getTransactionClass(), token)
+                  : mintNft(wallet, getWalletClass(), getTransactionClass(), token))}
       >
          {#if txRunning}
             <div class="flex flex-nowrap justify-center items-center gap-3">

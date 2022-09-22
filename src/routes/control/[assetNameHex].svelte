@@ -19,7 +19,6 @@
    import Switch from '$lib/components/nm/switch.svelte'
    import Input from '$lib/components/nm/input.svelte'
    import InlineDropdown from '$lib/components/inlineDropdown.svelte'
-   import { cardanoParams } from '$lib/functions/cardanoConstants'
    import type { MetadataCIP38 } from '$lib/types/cardano/metadata/cip38'
    import type { TokenMetadataPayload } from '$lib/types/cardano/metadata'
    import { burnFt } from '$lib/functions/transactions/burnFt'
@@ -121,7 +120,6 @@
                      wallet,
                      walletClass,
                      getTransactionClass(),
-                     cardanoParams,
                      [
                         {
                            policy: policyFt.cborHex,
@@ -170,7 +168,6 @@
                            wallet,
                            walletClass,
                            getTransactionClass(),
-                           cardanoParams,
                            [
                               {
                                  policy: policyNft.cborHex,
@@ -219,7 +216,6 @@
                            wallet,
                            walletClass,
                            getTransactionClass(),
-                           cardanoParams,
                            [
                               {
                                  policy: policyNft.cborHex,
@@ -286,7 +282,6 @@
                               wallet,
                               walletClass,
                               getTransactionClass(),
-                              cardanoParams,
                               [
                                  {
                                     policy: policyNft.cborHex,

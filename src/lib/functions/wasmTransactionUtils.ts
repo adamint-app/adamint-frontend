@@ -1,7 +1,7 @@
 import type { CardanoWasm } from "$lib/types/cardano/wasm"
 import type { hash_script_data, BigNum, Value, TransactionBuilder, TransactionOutput, ScriptHash, Address, Costmdls, TransactionOutputs, AssetName, AuxiliaryData, Transaction, PlutusData } from '$lib/../../node_modules/cardano-serialization-lib'
-import type { TransactionUnspentOutput, TransactionBuilderConfig, PlutusScript } from '$lib/../../node_modules/cardano-serialization-lib'
-import { MetadataJsonSchema, CoinSelectionStrategyCIP2 } from '$lib/../../node_modules/cardano-serialization-lib'
+import type {  TransactionUnspentOutput, TransactionBuilderConfig, PlutusScript } from '$lib/../../node_modules/cardano-serialization-lib'
+
 import policyFt from '../../../static/cardano/mint-ft-policy.json'
 import policyNft from '../../../static/cardano/mint-nft-policy.json'
 import { ftPolicyId, nftPolicyId } from '$lib/functions/policyIds'
@@ -9,13 +9,11 @@ import { showCardanoValue, type AnyWallet } from "./walletUtils"
 import { mapUncbor, tocbor, uncbor, unsafeCbor, unsafeCborBytes, unsafeCborHex, type WalletCIP30Api } from "$lib/types/wallets/cip30Api"
 import { assetsCardanoValue, fakeHash, fromWasmUTxOId, utxoIdToRawBytes, valueWasmAssets, valueWasmAssetsOnly, type WasmAssets } from "$lib/functions/wasmUtils"
 import { fromHex, fromHex_, toHex } from "$lib/functions/bytes"
-import { cardanoParams, type CardanoParams } from "./cardanoConstants"
 import type { TokenParam, FtParams, TokenDeltaParam } from "$lib/types/cardano/transactionModel"
 import type { CardanoMetadata } from "$lib/types/cardano/metadata"
 import { Buffer } from 'buffer'
 import { bech32m } from 'bech32'
 import CoinSelection from "./cardano/CoinSelection"
-import { costModel } from "./cardano/languageViews"
 import { tuple, zip } from "./tuple"
 import type { WalletLike } from "$lib/types/walletLike"
 import { makeOgmiosContext } from "$lib/services/ogmiosClient"
@@ -23,24 +21,30 @@ import type { ExUnits } from "@cardano-ogmios/schema"
 import { compareNumber } from "./array"
 
 import { createTxSubmissionClient } from "@cardano-ogmios/client"
+import type { ProtocolParams } from "$lib/types/cardano/network"
 
-const getLinearFee = (cardanoParams: CardanoParams) => cardanoWasm.LinearFee.new(
-   toBigNum(cardanoParams.protocolParams.minFeeA),
-   toBigNum(cardanoParams.protocolParams.minFeeB)
+enum MetadataJsonSchema {
+   NoConversions,
+   BasicConversions,
+   DetailedSchema,
+}
+
+const getLinearFee = (cardanoParams: ProtocolParams) => cardanoWasm.LinearFee.new(
+   toBigNum(cardanoParams.minFeeA),
+   toBigNum(cardanoParams.minFeeB)
 )
 
-export function makeTxBuilderCfg (cardanoParams: CardanoParams) {
-   const protocol = cardanoParams.protocolParams
+export function makeTxBuilderCfg (cardanoParams: ProtocolParams) {
    return cardanoWasm.TransactionBuilderConfigBuilder.new()
       .fee_algo(getLinearFee(cardanoParams))
-      .pool_deposit(toBigNum(protocol.poolDeposit))
-      .key_deposit(toBigNum(protocol.keyDeposit))
-      .max_value_size(protocol.maxValSize)
-      .max_tx_size(protocol.maxTxSize)
-      .coins_per_utxo_word(toBigNum(protocol.coinsPerUTxOWord))
-      .price_mem(protocol.priceMem)
-      .price_step(protocol.priceStep)
-      .costmdls(makeCostModel())
+      .pool_deposit(toBigNum(cardanoParams.poolDeposit))
+      .key_deposit(toBigNum(cardanoParams.keyDeposit))
+      .max_value_size(parseInt(cardanoParams.maxValSize))
+      .max_tx_size(cardanoParams.maxTxSize)
+      .coins_per_utxo_word(toBigNum(cardanoParams.coinsPerUtxoWord))
+      .price_mem(cardanoParams.priceMem)
+      .price_step(cardanoParams.priceStep)
+      .costmdls(makeCostModel(cardanoParams))
       .prefer_pure_change(false)
       .build()
 }
@@ -64,16 +68,16 @@ type SelectionResult = {
    change: Value
 }
 
-async function pickUtxos(cardanoParams: CardanoParams, walletUTxOs: TransactionUnspentOutput[],
+async function pickUtxos(cardanoParams: ProtocolParams, walletUTxOs: TransactionUnspentOutput[],
    receiver: Address, toMint: WasmTokenDeltaParam[], continuing: WasmTokenParam[], extra: WasmAssets[],
    fee: BigNum) {
    const totalAssets = 0
 
    CoinSelection.setProtocolParameters(
-      cardanoParams.protocolParams.coinsPerUTxOWord.toString(),
-      cardanoParams.protocolParams.minFeeA.toString(), // linearFee.coefficient().to_str(),
-      cardanoParams.protocolParams.minFeeB.toString(), // linearFee.constant().to_str(),
-      cardanoParams.protocolParams.maxTxSize.toString()
+      cardanoParams.coinsPerUtxoWord.toString(),
+      cardanoParams.minFeeA.toString(), // linearFee.coefficient().to_str(),
+      cardanoParams.minFeeB.toString(), // linearFee.constant().to_str(),
+      cardanoParams.maxTxSize.toString()
    )
 
    const fakeOutputs = cardanoWasm.TransactionOutputs.new();
@@ -102,7 +106,7 @@ async function pickUtxos(cardanoParams: CardanoParams, walletUTxOs: TransactionU
             multiAssetInsert(p[0], a[0], a[1])))
 
       fakeMintedValue.set_multiasset(multiAsset)
-      const minAda = cardanoWasm.min_ada_required(fakeMintedValue, false, toBigNum(cardanoParams.protocolParams.coinsPerUTxOWord))
+      const minAda = cardanoWasm.min_ada_required(fakeMintedValue, false, toBigNum(cardanoParams.coinsPerUtxoWord))
       //console.log('Min ADA: ' + minAda.to_str())
       //fakeMintedValue.set_coin(minAda)
       // ======
@@ -153,10 +157,10 @@ function setCollateral(txBuilder: TransactionBuilder, utxos: TransactionUnspentO
    txBuilder.set_collateral(inputs)
 }
 
-function makeCostModel() {
+function makeCostModel(pp: ProtocolParams) {
    const costmdls = cardanoWasm.Costmdls.new()
    const costmdl = cardanoWasm.CostModel.new()
-   costModel.cost.forEach((cost, index) => {
+   pp.costModel.forEach((cost, index) => {
      costmdl.set(index, cardanoWasm.Int.new_i32(cost))
    })
    costmdls.insert(cardanoWasm.Language.new_plutus_v1(), costmdl)
@@ -180,7 +184,7 @@ export async function sendTransaction(wallet: WalletCIP30Api, tx: Uint8Array) {
    }
 }
 
-async function performCoinSelection(walletUTxOs: TransactionUnspentOutput[],
+async function performCoinSelection(cardanoParams: ProtocolParams, walletUTxOs: TransactionUnspentOutput[],
    receiver: Address, toMint: WasmTokenDeltaParam[], continuing: WasmTokenParam[], extra: WasmAssets[],
    fee: BigNum) {
    const selection = await pickUtxos(cardanoParams, walletUTxOs, receiver, toMint, continuing, extra, fee)
@@ -188,7 +192,7 @@ async function performCoinSelection(walletUTxOs: TransactionUnspentOutput[],
    const inUTxOsMultiAssets = [].concat(...utxos.map(u => valueWasmAssetsOnly(u.output().amount())))
 
    if (utxos.length === 0) {
-      return Promise.reject('Wallet has no suitable UTxOs!')
+      throw new Error('Wallet has no suitable UTxOs!')
    }
 
    const utxosTotalLovelace = utxos.reduce((acc, cur) =>
@@ -203,7 +207,7 @@ async function performCoinSelection(walletUTxOs: TransactionUnspentOutput[],
 }
 
 // Evaluate tx cost and fee
-export async function preEvaluateTx(tx: Transaction) {
+export async function preEvaluateTx(cardanoParams: ProtocolParams, tx: Transaction) {
    const ogmios = await makeOgmiosContext().then(createTxSubmissionClient)
    const evaluatedUnits = await ogmios.evaluateTx(toHex(tx.to_bytes()))
    ogmios.shutdown()
@@ -238,16 +242,16 @@ export type TxUnknowns = {
 
 // https://githubhot.com/repo/Emurgo/cardano-serialization-lib/issues/303
 export async function buildUnknownMintTransaction(
+   cardanoParams: ProtocolParams,
    wallet: WalletCIP30Api,
    builderConfig: TransactionBuilderConfig,
-   cardanoParams: CardanoParams,
    toMint: WasmTokenDeltaParam[],
    continuing: WasmTokenParam[],
    unknowns?: TxUnknowns) {
    const receiver = mapUncbor(cardanoWasm.Address.from_bytes)
       (await wallet.instance.getUsedAddresses())[0]
    if (!receiver) {
-      return Promise.reject('Receive address not found!')
+      throw new Error('Receive address not found!')
    }
 
    // ==============
@@ -256,7 +260,7 @@ export async function buildUnknownMintTransaction(
 
    const fee = unknowns?.fee ?? toBigNum(500000)
    const { utxos, inUTxOsMultiAssets, outChangeLovelace } =
-      await performCoinSelection(walletUTxOs, receiver, toMint, continuing, [], fee)
+      await performCoinSelection(cardanoParams, walletUTxOs, receiver, toMint, continuing, [], fee)
    // ===============
 
    const newAssetName = utxoIdToRawBytes(utxos[0])
@@ -313,7 +317,7 @@ export async function buildUnknownMintTransaction(
    const collateral = mapUncbor(cardanoWasm.TransactionUnspentOutput.from_bytes)
       (await wallet.instance.getCollateral({amount: 1500000}))
    if (collateral.length <= 0) {
-      return Promise.reject("No available collateral!")
+      throw new Error("No available collateral!")
    }
    setCollateral(txBuilder, collateral.slice(0, 2))
 
@@ -409,9 +413,9 @@ export const runIgnoreErrors = <T, R>(f: (arg?: T) => Promise<R>) => async (arg?
 
 export const minimumFeeRegEx = /FeeTooSmallUTxO \(Coin (\d+)/
 
-export function calculateFee(cardanoParams: CardanoParams, tx: Transaction, cost: ExUnits) {
+export function calculateFee(cardanoParams: ProtocolParams, tx: Transaction, cost: ExUnits) {
    const txBytesLength = tx.to_bytes().length
-   const p = cardanoParams.protocolParams
+   const p = cardanoParams
    const sendTxOverhead = 15 // bytes
    return toBigNum(Math.ceil((txBytesLength + sendTxOverhead) * p.minFeeA + cost.memory * p.priceMem + cost.steps * p.priceStep + p.minFeeB))
 }

@@ -3,12 +3,6 @@
 </script>
 
 <script lang="ts">
-   import type {
-      AssetName,
-      BigNum,
-      ScriptHash,
-      Value
-   } from '$lib/../../node_modules/cardano-serialization-lib'
    // import type { CardanoWalletCIP30Api } from 'src/types/cardanoDAppWallet'
    //var Buffer = require('buffer/').Buffer
    // import { Buffer } from 'buffer'

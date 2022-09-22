@@ -1,7 +1,6 @@
 import type { FtParams } from "$lib/types/cardano/transactionModel"
 import type { MintTransactionBuilder, TransactionWallet } from "$lib/types/cardano/transactionWallet"
 import { assetIconAllowed, assetIconBlobAllowed } from "$lib/functions/assetIcon"
-import type { CardanoParams } from "$lib/functions/cardanoConstants"
 import type { AnyWallet, AnyWalletLike } from "$lib/functions/walletUtils"
 import type { ImportCandidate } from 'ipfs-core-types/types/src/utils'
 import { CID } from 'multiformats/cid'
@@ -70,7 +69,7 @@ async function asyncUploadNft(toUpload: [string, Blob][]) {
    // https://stackoverflow.com/questions/59694309/for-await-of-vs-promise-all
    for (const result of await Promise.all(toUpload.map(e => nftStorageClient.storeBlob(e[1])))) {
       // uploadedIds.push('ipfs://' + result)
-      console.log(CID.parse(result).code)
+      console.log('asyncUploadNft', result, CID.parse(result), CID.parse(result).code)
       //uploadedIds.push('ipfs://' + CID.parse(result, base32).toV0().toString())
       // By default, CIDs from nft.starage are in V1 base32 format,
       // which is too long to store in cardano metadata.
@@ -79,11 +78,11 @@ async function asyncUploadNft(toUpload: [string, Blob][]) {
    }
    }catch(e){
       console.log(e)
-      return Promise.reject(e)
+      throw e
    }
 
    if (toUpload.length !== uploadedIds.length) {
-      return Promise.reject('Not all files uploaded!')
+      throw new Error('Not all files uploaded!')
    }
 
    return zip(toUpload.map(e => e[0]), uploadedIds)
@@ -93,18 +92,17 @@ export async function mintFt(
    wallet: AnyWalletLike,
    walletClass: WalletLike<AnyWalletLike>,
    transactionClass: TransactionWallet<AnyWalletLike>,
-   uiMintParams: UiFtParams,
-   cardanoParams: CardanoParams) {
+   uiMintParams: UiFtParams) {
 
    {
       const firstInvalid = objectFirst(uiMintParams.icons, v => !assetIconBlobAllowed(v))
       if (firstInvalid) {
-         return Promise.reject(`Icon '${firstInvalid[0]}' is not allowed due to size or format`)
+         throw new Error(`Icon '${firstInvalid[0]}' is not allowed due to size or format`)
       }
    }
 
    if (!uiMintParams.icons[uiMintParams.icon]) {
-      return Promise.reject('Default icon not set or not present in icon list!')
+      throw new Error('Default icon not set or not present in icon list!')
    }
 
    // =====
@@ -163,7 +161,7 @@ export async function mintFt(
       return mergeMetadata([cip25Ft, cip38Ft, cip25Nft])
    })
 
-   const tx = await transactionClass.mintFtTransaction(wallet, uiMintParams, cardanoParams, mkMetadata)
+   const tx = await transactionClass.mintFtTransaction(wallet, uiMintParams, mkMetadata)
    return walletClass.sendTx(wallet, tx).catch(e => {
       console.log(e)
       return rejectWith(e)

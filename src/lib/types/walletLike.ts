@@ -21,4 +21,5 @@ export type WalletLike<Wallet> = {
    getBalance(wallet: Wallet): Promise<CardanoValue>
    getUtxos(wallet: Wallet): Promise<WalletUTxO[]>
    sendTx(wallet: Wallet, tx: Uint8Array): Promise<string>
+   getNetwork(wallet: Wallet): Promise<string>
 }

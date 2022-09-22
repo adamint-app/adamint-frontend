@@ -1,7 +1,6 @@
 import type { FtParams } from "$lib/types/cardano/transactionModel"
 import type { TransactionWallet } from "$lib/types/cardano/transactionWallet"
 import { assetIconAllowed, assetIconBlobAllowed } from "$lib/functions/assetIcon"
-import type { CardanoParams } from "$lib/functions/cardanoConstants"
 import type { AnyWalletLike } from "$lib/functions/walletUtils"
 import type { ImportCandidate } from 'ipfs-core-types/types/src/utils'
 import { CID } from 'multiformats/cid'
@@ -52,7 +51,7 @@ export type UiNftParams = {
 //    }catch(e){console.log(e)}
 // 
 //    if (toUpload.length !== uploadedIds.length) {
-//       return Promise.reject('Not all files uploaded!')
+//       throw new Error('Not all files uploaded!')
 //    }
 // 
 //    return zip(toUpload.map(e => e[0]), uploadedIds)
@@ -77,11 +76,11 @@ async function asyncUploadNft(toUpload: [string, Blob][]) {
    }
    }catch(e){
       console.log(e)
-      return Promise.reject(e)
+      throw e
    }
 
    if (toUpload.length !== uploadedIds.length) {
-      return Promise.reject('Not all files uploaded!')
+      throw new Error('Not all files uploaded!')
    }
 
    return zip(toUpload.map(e => e[0]), uploadedIds)
@@ -91,17 +90,16 @@ export async function mintNft(
    wallet: AnyWalletLike,
    walletClass: WalletLike<AnyWalletLike>,
    transactionClass: TransactionWallet<AnyWalletLike>,
-   uiMintParams: UiNftParams,
-   cardanoParams: CardanoParams) {
+   uiMintParams: UiNftParams) {
 
    {
       if (!uiMintParams.image) {
-         return Promise.reject(`NFT should have an image!`)
+         throw new Error(`NFT should have an image!`)
       }
    }
 
    if (!uiMintParams.name || uiMintParams.name.trim().length === 0) {
-      return Promise.reject('NFT should have a name!')
+      throw new Error('NFT should have a name!')
    }
 
    // =====
@@ -139,7 +137,7 @@ export async function mintNft(
       return cip25Nft
    })
 
-   const tx = await transactionClass.mintNftTransaction(wallet, cardanoParams, mkMetadata)
+   const tx = await transactionClass.mintNftTransaction(wallet, mkMetadata)
    return walletClass.sendTx(wallet, tx).catch(e => {
       console.log(e)
       return rejectWith(e)

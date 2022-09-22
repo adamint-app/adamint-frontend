@@ -1,6 +1,6 @@
 //import GQL from '@cardano-graphql/client-ts'
 import type {Query} from '@cardano-graphql/client-ts'
-import { ApolloClient, InMemoryCache, gql, createHttpLink } from '@apollo/client/core/index.js'
+import { ApolloClient, InMemoryCache, gql, createHttpLink, type NormalizedCacheObject } from '@apollo/client/core/index.js'
 
 // export function createApolloClient(authToken: string = undefined) {
 //    const cache = new InMemoryCache();
@@ -30,3 +30,5 @@ export const graphqlClient = SvelteApolloClient({
   //   "Access-Control-Allow-Headers": "Content-Type",
   // }
 })
+
+export type GraphQLClient = SvelteApolloClient<NormalizedCacheObject>

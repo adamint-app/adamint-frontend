@@ -7,9 +7,9 @@ import { replaceAll } from "./string"
 //import { Buffer } from 'buffer'
 // import { valueWasmAssets } from "./wasmUtils"
 import type { CardanoValue, WalletLike } from "$lib/types/walletLike"
-import type { AssetName, BigNum } from '$lib/../../node_modules/cardano-serialization-lib'
 import type { CardanoWasm } from "$lib/types/cardano/wasm"
 import type { TransactionWallet } from "$lib/types/cardano/transactionWallet"
+import type { ProtocolParams } from "$lib/types/cardano/network"
 
 export function sanitizeWalletName(name: string) {
    return replaceAll(name, 'wallet', '', true).trim()
@@ -80,9 +80,9 @@ export function selectWalletTypeclass(wallet: AnyWallet): WalletLike<AnyWalletLi
    }
 }
 
-export function selectTransactionWalletTypeclass(wallet: AnyWallet): TransactionWallet<AnyWalletLike> {
+export function selectTransactionWalletTypeclass(wallet: AnyWallet): (cardanoParams: ProtocolParams) => TransactionWallet<AnyWalletLike> {
    switch(wallet.walletType) {
       case 'cip30': return transactionWalletCIP30
-      case 'typhon': return transactionWalletTyphon
+      case 'typhon': return ()=>transactionWalletTyphon
    }
 }
