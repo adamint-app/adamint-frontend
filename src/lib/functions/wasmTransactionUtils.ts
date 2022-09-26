@@ -1,5 +1,5 @@
 import type { CardanoWasm } from "$lib/types/cardano/wasm"
-import type { hash_script_data, BigNum, Value, TransactionBuilder, TransactionOutput, ScriptHash, Address, Costmdls, TransactionOutputs, AssetName, AuxiliaryData, Transaction, PlutusData } from '$lib/../../node_modules/cardano-serialization-lib'
+import { type hash_script_data, BigNum, type Value, type TransactionBuilder, type TransactionOutput, type ScriptHash, type Address, type Costmdls, type TransactionOutputs, type AssetName, type AuxiliaryData, type Transaction, type PlutusData, ConstrPlutusData, PlutusList } from '$lib/../../node_modules/cardano-serialization-lib'
 import type {  TransactionUnspentOutput, TransactionBuilderConfig, PlutusScript } from '$lib/../../node_modules/cardano-serialization-lib'
 
 import policyFt from '../../../static/cardano/mint-ft-policy.json'
@@ -133,15 +133,15 @@ export const toBigNum = (n: number) => cardanoWasm.BigNum.from_str(n.toString())
 const showValue = (v: Value) => showCardanoValue(assetsCardanoValue(valueWasmAssets(v)))
 
 // https://github.com/Emurgo/cardano-serialization-lib/issues/303
-function mintRedeemer(index: number, redeemerData: PlutusData, units?: ExUnits) {
+function mintRedeemer(index: number, redeemerData: PlutusData, units: ExUnits) {
    // redeemer itself
    const redeemer = cardanoWasm.Redeemer.new(
       cardanoWasm.RedeemerTag.new_mint(),
       toBigNum(index),
       redeemerData,
       cardanoWasm.ExUnits.new(
-         toBigNum(units?.memory ?? 0),
-         toBigNum(units?.steps ?? 0)
+         toBigNum(units.memory),
+         toBigNum(units.steps)
       )
    )
 
@@ -167,7 +167,12 @@ function makeCostModel(pp: ProtocolParams) {
    return costmdls
 }
 
-export const rejectWith = (e: unknown) => Promise.reject(e['info'] ?? e['message'] ?? (typeof e === 'string' ? e : JSON.stringify(e)))
+export const rejectWith = (e: unknown) => {
+   console.log('rejectWith', e)
+   throw new Error(
+      e['info'] ?? e['message'] ?? (typeof e === 'string' ? e : JSON.stringify(e))
+   )
+}
 
 export type MintTransactionBuilder = {
    assetName: Uint8Array
@@ -208,8 +213,10 @@ async function performCoinSelection(cardanoParams: ProtocolParams, walletUTxOs: 
 
 // Evaluate tx cost and fee
 export async function preEvaluateTx(cardanoParams: ProtocolParams, tx: Transaction) {
-   const ogmios = await makeOgmiosContext().then(createTxSubmissionClient)
-   const evaluatedUnits = await ogmios.evaluateTx(toHex(tx.to_bytes()))
+   console.log('preEvaluateTx')
+   const ogmios = await makeOgmiosContext().catch(rejectWith).then(createTxSubmissionClient).catch(rejectWith)
+   console.log('createdOgmios')
+   const evaluatedUnits = await ogmios.evaluateTx(toHex(tx.to_bytes())).catch(rejectWith)
    ogmios.shutdown()
    console.log(evaluatedUnits)
    const mintRedeemerExs = Object.entries(evaluatedUnits)
@@ -344,7 +351,7 @@ export async function buildUnknownMintTransaction(
 
          const setRedeemers = (txBuilder: TransactionBuilder, redeemerExs: [PlutusData, ExUnits][]) => {
             const redeemers = cardanoWasm.Redeemers.new()
-            redeemerExs.forEach((r, i) => redeemers.add(mintRedeemer(i, r[0], r[1])))
+            redeemerExs.forEach((r, i) => redeemers.add(mintRedeemer(i, ...r)))
             txBuilder.set_redeemers(redeemers)
             txBuilder.set_plutus_scripts(plutusScripts)
 
@@ -359,7 +366,7 @@ export async function buildUnknownMintTransaction(
          //    cardanoWasm.BigNum.from_str('0'),
          //    cardanoWasm.PlutusList.new()
          // ))
-         const mintPlutusData = cardanoWasm.PlutusData.new_integer(cardanoWasm.BigInt.from_str('0'))
+         const mintPlutusData = cardanoWasm.PlutusData.new_constr_plutus_data(ConstrPlutusData.new(BigNum.zero(), PlutusList.new())) // .new_integer(cardanoWasm.BigInt.from_str('0'))
 
          setRedeemers(txBuilder, redeemerExs.map(ex => tuple(mintPlutusData, ex)))
 

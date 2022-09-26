@@ -7,10 +7,12 @@ import { gql } from '@apollo/client/core/index.js'
 
 // import gqlProtocolParams from "$lib/functions/cardanoGraphQL/protocolParams.gql?raw"
 /// const gqlProtocolParams = require("$lib/functions/cardanoGraphQL/protocolParams.gql?raw")
-const coinsPerUtxoWordField = (network: string) => network === 'mainnet' ? 'coinsPerUtxoWord' : 'coinsPerUtxoByte'
-const coinsPerUtxoWordValue = (network: string, p: ProtocolParams): number => network === 'mainnet'
-  ? p.coinsPerUtxoWord
-  : p['coinsPerUtxoByte']
+const coinsPerUtxoWordField = (network: string) =>
+  network === 'mainnet'
+  ? 'coinsPerUtxoByte'
+  : 'coinsPerUtxoByte'
+const coinsPerUtxoWordValue = (network: string, p: ProtocolParams): number => 
+  p[coinsPerUtxoWordField(network)] * (network === 'mainnet' ? 8 : 1)
 const gqlProtocolParams = (network: string) => gql(`
 query currentEpochProtocolParams {
   cardano {
